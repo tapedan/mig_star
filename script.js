@@ -508,19 +508,19 @@ function setupEventListeners() {
       timestamp: Date.now()
     };
 
-    const encoded = btoa(JSON.stringify(payload));
 
     elements.qrCodeArea.innerHTML = "";
     elements.qrVideo.classList.add("hidden");
 
-    QRCode.toCanvas(
-      encoded,
-      { width: 260 },
-      (err, canvas) => {
-        if (!err) elements.qrCodeArea.appendChild(canvas);
-      }
-    );
+const encoded = btoa(JSON.stringify(payload));
 
+QRCode.toCanvas(
+  encoded,
+  { width: 250 },
+  (err, canvas) => {
+    if (!err) elements.qrCodeArea.appendChild(canvas);
+  }
+);
     elements.qrModal.classList.remove("hidden");
   });
 
@@ -623,6 +623,37 @@ function scanLoop() {
   // ======================================================
   // === RESTO DAS FUNÇÕES ORIGINAIS ======================
   // ======================================================
+
+function handleQR(data) {
+  // Validar se é o payload certo
+  if (!data || data.type !== "migstar_transfer") {
+    showToast("QR inválido!", false);
+    return;
+  }
+
+  // Abrir modal de senha
+  elements.passwordModal.classList.remove("hidden");
+  elements.passwordInput.value = "";
+  elements.passwordError.classList.add("hidden");
+  elements.passwordInput.focus();
+
+  // Confirmação da senha para processar a transferência
+  elements.confirmPassword.onclick = () => {
+    if (elements.passwordInput.value === "2009") {
+      // Senha correta
+      elements.passwordModal.classList.add("hidden");
+      receiveStars(data.amount);
+
+      // Fechar modal QR
+      elements.qrModal.classList.add("hidden");
+
+      // Garantir que a câmera pare (por segurança)
+      stopCamera();
+    } else {
+      elements.passwordError.classList.remove("hidden");
+    }
+  };
+}
 
   elements.tabButtons.forEach(btn => {
     btn.addEventListener('click', ()=> {
