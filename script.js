@@ -476,155 +476,238 @@
         }
       }
 
-      function setupEventListeners(){
-        // === QR CODE GENERATOR ===
-elements.generateQRBtn = document.getElementById("generateQRBtn");
-elements.scanQRBtn = document.getElementById("scanQRBtn");
-elements.qrModal = document.getElementById("qrModal");
-elements.qrCodeArea = document.getElementById("qrCodeArea");
-elements.qrVideo = document.getElementById("qrVideo");
-elements.closeQR = document.getElementById("closeQR");
+function setupEventListeners() {
 
-// gerar
-elements.generateQRBtn.addEventListener("click", () => {
-  const amount = elements.amount.value;
-  if (!amount || amount <= 0) {
-    showToast("Informe a quantidade!", false);
-    return;
+  // PEGAR ELEMENTOS
+  elements.generateQRBtn = document.getElementById("generateQRBtn");
+  elements.scanQRBtn = document.getElementById("scanQRBtn");
+  elements.qrModal = document.getElementById("qrModal");
+  elements.qrCodeArea = document.getElementById("qrCodeArea");
+  elements.qrVideo = document.getElementById("qrVideo");
+  elements.closeQR = document.getElementById("closeQR");
+
+  let scanActive = false;
+  let scanFrame;
+
+  // ======================================================
+  // === GERAR QR CODE — COMPACTADO EM BASE64 ============
+  // ======================================================
+  elements.generateQRBtn.addEventListener("click", () => {
+    const amount = elements.amount.value;
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+      showToast("Informe a quantidade!", false);
+      return;
+    }
+
+    const payload = {
+      type: "migstar_transfer",
+      from: "Danilo Jorge",
+      amount: parseInt(amount),
+      device: navigator.userAgent,
+      timestamp: Date.now()
+    };
+
+    const encoded = btoa(JSON.stringify(payload));
+
+    elements.qrCodeArea.innerHTML = "";
+    elements.qrVideo.classList.add("hidden");
+
+    QRCode.toCanvas(
+      encoded,
+      { width: 260 },
+      (err, canvas) => {
+        if (!err) elements.qrCodeArea.appendChild(canvas);
+      }
+    );
+
+    elements.qrModal.classList.remove("hidden");
+  });
+
+  // FECHAR O MODAL
+  elements.closeQR.addEventListener("click", () => {
+    elements.qrModal.classList.add("hidden");
+    stopCamera();
+  });
+
+  function stopCamera() {
+    scanActive = false;
+
+    const stream = elements.qrVideo.srcObject;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    elements.qrVideo.srcObject = null;
+    cancelAnimationFrame(scanFrame);
   }
 
-  const payload = {
-    type: "migstar_transfer",
-    from: "Danilo Jorge",
-    amount: parseInt(amount),
-    device: navigator.userAgent,
-    timestamp: Date.now()
-  };
+  // ======================================================
+  // === INICIAR LEITURA DO QR EM ALTA RESOLUÇÃO =========
+  // ======================================================
+  elements.scanQRBtn.addEventListener("click", startScanning);
 
-  elements.qrCodeArea.innerHTML = "";
-  elements.qrVideo.classList.add("hidden");
+  function startScanning() {
+    elements.qrCodeArea.innerHTML = "";
+    elements.qrVideo.classList.remove("hidden");
 
-  QRCode.toCanvas(
-    JSON.stringify(payload),
-    { width: 250 },
-    (err, canvas) => {
-      if (err) return;
-      elements.qrCodeArea.appendChild(canvas);
-    }
-  );
-
-  elements.qrModal.classList.remove("hidden");
-});
-
-// fechar modal
-elements.closeQR.addEventListener("click", () => {
-  elements.qrModal.classList.add("hidden");
-  stopCamera();
-});
-
-// === QR SCAN ===
-elements.scanQRBtn.addEventListener("click", startScanning);
-
-function startScanning() {
-  elements.qrCodeArea.innerHTML = "";
-  elements.qrVideo.classList.remove("hidden");
-
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    })
     .then(stream => {
       elements.qrVideo.srcObject = stream;
-      elements.qrVideo.play();
-      scanLoop();
+
+      elements.qrVideo.onloadeddata = () => {
+        scanActive = true;
+        scanLoop();
+      };
+
       elements.qrModal.classList.remove("hidden");
     })
-    .catch(() => showToast("Câmera não disponível!", false));
-}
-
-function stopCamera() {
-  const stream = elements.qrVideo.srcObject;
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
+    .catch(e => {
+      console.error(e);
+      showToast("Câmera não disponível!", false);
+    });
   }
-}
 
-function scanLoop() {
-  if (elements.qrModal.classList.contains("hidden")) return;
+  // ======================================================
+  // === LOOP DE LEITURA — 60 FPS, ESPERA VÍDEO ===========
+  // ======================================================
+  function scanLoop() {
+    if (!scanActive) return;
 
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+    const video = elements.qrVideo;
 
-  canvas.width = elements.qrVideo.videoWidth;
-  canvas.height = elements.qrVideo.videoHeight;
-
-  ctx.drawImage(elements.qrVideo, 0, 0, canvas.width, canvas.height);
-
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const result = jsQR(imgData.data, canvas.width, canvas.height);
-
-  if (result) {
-    try {
-      const json = JSON.parse(result.data);
-
-      if (json.type === "migstar_transfer") {
-        stopCamera();
-        elements.qrModal.classList.add("hidden");
-
-        // pede senha
-        elements.passwordModal.classList.remove("hidden");
-        elements.passwordInput.focus();
-        elements.passwordError.classList.add("hidden");
-
-        elements.confirmPassword.onclick = () => {
-          if (elements.passwordInput.value === "2009") {
-            elements.passwordModal.classList.add("hidden");
-            receiveStars(json.amount);
-          } else {
-            elements.passwordError.classList.remove("hidden");
-          }
-        };
-      }
-    } catch (err) {
-      console.error(err);
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      scanFrame = requestAnimationFrame(scanLoop);
+      return;
     }
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const qr = jsQR(frame.data, canvas.width, canvas.height, {
+      inversionAttempts: "dontInvert"
+    });
+
+    if (qr) {
+      scanActive = false;
+      stopCamera();
+
+      try {
+        const data = JSON.parse(atob(qr.data));
+
+        if (data.type === "migstar_transfer") {
+
+          // pedir senha
+          elements.passwordModal.classList.remove("hidden");
+          elements.passwordInput.focus();
+          elements.passwordError.classList.add("hidden");
+
+          elements.confirmPassword.onclick = () => {
+            if (elements.passwordInput.value === "2009") {
+              elements.passwordModal.classList.add("hidden");
+              receiveStars(data.amount);
+            } else {
+              elements.passwordError.classList.remove("hidden");
+            }
+          };
+
+        }
+
+      } catch (e) {
+        console.error("QR inválido", e);
+        showToast("QR inválido!", false);
+      }
+
+      return;
+    }
+
+    scanFrame = requestAnimationFrame(scanLoop);
   }
 
-  requestAnimationFrame(scanLoop);
+  // ======================================================
+  // === RESTO DAS FUNÇÕES ORIGINAIS ======================
+  // ======================================================
+
+  elements.tabButtons.forEach(btn => {
+    btn.addEventListener('click', ()=> {
+      elements.tabButtons.forEach(b=>{
+        b.classList.remove('text-blue-600','border-blue-600');
+        b.classList.add('text-blue-500','hover:text-blue-600');
+      });
+
+      btn.classList.add('text-blue-600','border-blue-600');
+      btn.classList.remove('text-blue-500','hover:text-blue-600');
+
+      const tabId = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+
+  elements.receiveBtn.addEventListener('click', ()=>{
+    const amount = elements.amount.value;
+    if (!amount || isNaN(amount) || parseInt(amount) <= 0) {
+      showToast("Digite uma quantidade válida!", false);
+      return;
+    }
+    elements.passwordModal.classList.remove('hidden');
+    elements.passwordInput.focus();
+  });
+
+  elements.confirmPassword.addEventListener('click', ()=> {
+    const password = elements.passwordInput.value;
+    if (password === "2009") {
+      elements.passwordModal.classList.add('hidden');
+      elements.passwordError.classList.add('hidden');
+      const amount = elements.amount.value;
+      if (receiveStars(amount)) elements.amount.value = '';
+    } else {
+      elements.passwordError.classList.remove('hidden');
+    }
+  });
+
+  elements.cancelPassword.addEventListener('click', ()=>{
+    elements.passwordModal.classList.add('hidden');
+    elements.passwordError.classList.add('hidden');
+  });
+
+  elements.showAll.addEventListener('click', ()=> {
+    elements.showAll.classList.add('text-blue-600','border-blue-600');
+    elements.showAll.classList.remove('text-blue-500','hover:text-blue-600');
+    elements.showTransactions.classList.remove('text-blue-600','border-blue-600');
+    elements.showMissions.classList.remove('text-blue-600','border-blue-600');
+    renderHistory('all');
+  });
+
+  elements.showTransactions.addEventListener('click', ()=> {
+    elements.showTransactions.classList.add('text-blue-600','border-blue-600');
+    elements.showTransactions.classList.remove('text-blue-500','hover:text-blue-600');
+    elements.showAll.classList.remove('text-blue-600','border-blue-600');
+    elements.showMissions.classList.remove('text-blue-600','border-blue-600');
+    renderHistory('transactions');
+  });
+
+  elements.showMissions.addEventListener('click', ()=> {
+    elements.showMissions.classList.add('text-blue-600','border-blue-600');
+    elements.showMissions.classList.remove('text-blue-500','hover:text-blue-600');
+    elements.showAll.classList.remove('text-blue-600','border-blue-600');
+    elements.showTransactions.classList.remove('text-blue-600','border-blue-600');
+    renderHistory('missions');
+  });
+
+  elements.resetBtn.addEventListener('click', resetLocalStorage);
+
 }
-
-        elements.tabButtons.forEach(btn => {
-          btn.addEventListener('click', ()=> {
-            elements.tabButtons.forEach(b=>{ b.classList.remove('text-blue-600','border-blue-600'); b.classList.add('text-blue-500','hover:text-blue-600'); });
-            btn.classList.add('text-blue-600','border-blue-600'); btn.classList.remove('text-blue-500','hover:text-blue-600');
-            const tabId = btn.getAttribute('data-tab');
-            document.querySelectorAll('.tab-content').forEach(content=>content.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-          });
-        });
-
-        elements.receiveBtn.addEventListener('click', ()=>{
-          const amount = elements.amount.value;
-          if (!amount || isNaN(amount) || parseInt(amount) <= 0) { showToast("Digite uma quantidade válida!", false); return; }
-          elements.passwordModal.classList.remove('hidden'); elements.passwordInput.focus();
-        });
-
-        elements.confirmPassword.addEventListener('click', ()=> {
-          const password = elements.passwordInput.value;
-          if (password === "2009") {
-            elements.passwordModal.classList.add('hidden'); elements.passwordError.classList.add('hidden');
-            const amount = elements.amount.value;
-            if (receiveStars(amount)) elements.amount.value = '';
-          } else { elements.passwordError.classList.remove('hidden'); }
-        });
-
-        elements.cancelPassword.addEventListener('click', ()=> { elements.passwordModal.classList.add('hidden'); elements.passwordError.classList.add('hidden'); });
-
-        elements.showAll.addEventListener('click', ()=> { elements.showAll.classList.add('text-blue-600','border-blue-600'); elements.showAll.classList.remove('text-blue-500','hover:text-blue-600'); elements.showTransactions.classList.remove('text-blue-600','border-blue-600'); elements.showMissions.classList.remove('text-blue-600','border-blue-600'); renderHistory('all'); });
-
-        elements.showTransactions.addEventListener('click', ()=> { elements.showTransactions.classList.add('text-blue-600','border-blue-600'); elements.showTransactions.classList.remove('text-blue-500','hover:text-blue-600'); elements.showAll.classList.remove('text-blue-600','border-blue-600'); elements.showMissions.classList.remove('text-blue-600','border-blue-600'); renderHistory('transactions'); });
-
-        elements.showMissions.addEventListener('click', ()=> { elements.showMissions.classList.add('text-blue-600','border-blue-600'); elements.showMissions.classList.remove('text-blue-500','hover:text-blue-600'); elements.showAll.classList.remove('text-blue-600','border-blue-600'); elements.showTransactions.classList.remove('text-blue-600','border-blue-600'); renderHistory('missions'); });
-
-        elements.resetBtn.addEventListener('click', resetLocalStorage);
-      }
 
       // Initialize app behavior
       loadState();
