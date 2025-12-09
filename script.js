@@ -208,6 +208,83 @@
 
     // Copiando/adaptando o seu script original para usar window.storage
     function initApp(){
+      function showTransferAnimation(amount, callback) {
+  // cria overlay preto
+  const overlay = document.createElement("div");
+  overlay.style.position = "fixed";
+  overlay.style.top = 0;
+  overlay.style.left = 0;
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.background = "rgba(0,0,0,0.85)";
+  overlay.style.zIndex = 9999;
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.color = "white";
+  overlay.style.fontFamily = "Inter, sans-serif";
+  overlay.style.textAlign = "center";
+
+  overlay.innerHTML = `
+    <div style="font-size:28px; margin-bottom:20px; opacity:0;" id="trfTitle">
+      Recebendo Transferência...
+    </div>
+
+    <div id="bars" style="display:flex; gap:10px; margin-bottom:20px; opacity:0;">
+      <div class="bar" style="width:12px; height:20px; background:#4f9efc; border-radius:4px;"></div>
+      <div class="bar" style="width:12px; height:35px; background:#4f9efc; border-radius:4px;"></div>
+      <div class="bar" style="width:12px; height:15px; background:#4f9efc; border-radius:4px;"></div>
+      <div class="bar" style="width:12px; height:40px; background:#4f9efc; border-radius:4px;"></div>
+      <div class="bar" style="width:12px; height:25px; background:#4f9efc; border-radius:4px;"></div>
+    </div>
+
+    <div id="amountMsg" style="font-size:22px; opacity:0;">+${amount} estrelas</div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // animações suaves
+  setTimeout(() => {
+    document.getElementById("trfTitle").style.transition = "300ms";
+    document.getElementById("trfTitle").style.opacity = 1;
+  }, 50);
+
+  setTimeout(() => {
+    document.getElementById("bars").style.transition = "300ms";
+    document.getElementById("bars").style.opacity = 1;
+
+    // barras pulsando
+    document.querySelectorAll(".bar").forEach((bar, i) => {
+      bar.animate([
+        { transform: "scaleY(1)" },
+        { transform: `scaleY(${1 + Math.random()*1.4})` }
+      ], {
+        duration: 500 + i * 100,
+        iterations: Infinity,
+        direction: "alternate",
+        easing: "ease-in-out"
+      });
+    });
+
+  }, 600);
+
+  setTimeout(() => {
+    document.getElementById("amountMsg").style.transition = "300ms";
+    document.getElementById("amountMsg").style.opacity = 1;
+  }, 1200);
+
+  // termina em 3 segundos
+  setTimeout(() => {
+    overlay.style.transition = "500ms";
+    overlay.style.opacity = 0;
+    setTimeout(() => {
+      overlay.remove();
+      callback(); // aplica estrelas de verdade
+    }, 500);
+  }, 3000);
+}
+
       const state = {
         user: null,
         missions: [],
@@ -625,34 +702,57 @@ function scanLoop() {
   // ======================================================
 
 function handleQR(data) {
-  // Validar se é o payload certo
-  if (!data || data.type !== "migstar_transfer") {
-    showToast("QR inválido!", false);
+
+  // precisa ser do novo formato
+  if (!data || data.type !== "migstar_transfer_v2") {
+    showToast("QR inválido ou antigo!", false);
     return;
   }
 
-  // Abrir modal de senha
-  elements.passwordModal.classList.remove("hidden");
-  elements.passwordInput.value = "";
-  elements.passwordError.classList.add("hidden");
-  elements.passwordInput.focus();
+  const amount = data.amount;
 
-  // Confirmação da senha para processar a transferência
-  elements.confirmPassword.onclick = () => {
-    if (elements.passwordInput.value === "2009") {
-      // Senha correta
-      elements.passwordModal.classList.add("hidden");
-      receiveStars(data.amount);
+  // trava nova leitura
+  scanActive = false;
 
-      // Fechar modal QR
-      elements.qrModal.classList.add("hidden");
+  // fecha modal de leitura
+  elements.qrModal.classList.add("hidden");
+  stopCamera();
 
-      // Garantir que a câmera pare (por segurança)
-      stopCamera();
-    } else {
-      elements.passwordError.classList.remove("hidden");
-    }
-  };
+  // animação cinematográfica
+  playReceiveAnimation(amount, () => {
+    // quando animação terminar → aplica as estrelas
+
+    state.user.stars += amount;
+    saveUser();
+    updateBalance(state.user.stars);
+
+    const transaction = {
+      from: "DanStar",
+      to: state.user.name,
+      amount,
+      datetime: new Date().toISOString()
+    };
+
+    state.transactions.unshift(transaction);
+    saveTransactions();
+
+    const historyItem = {
+      type: "transaction",
+      from: transaction.from,
+      to: transaction.to,
+      amount: transaction.amount,
+      date: transaction.datetime
+    };
+
+    state.history.unshift(historyItem);
+    saveHistory();
+
+    renderDashboard();
+    renderHistory("all");
+
+    showToast(`+${amount} estrelas recebidas! ✨`, true);
+  });
+
 }
 
   elements.tabButtons.forEach(btn => {
@@ -750,3 +850,24 @@ function handleQR(data) {
 
     boot(); // start
   })();
+  
+  function playReceiveAnimation(amount, callback) {
+    const overlay = document.getElementById("receivingOverlay");
+    const sound = document.getElementById("receiveSound");
+
+    overlay.classList.remove("hidden");
+    overlay.style.display = "flex";
+
+    // tocar audio
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(()=>{});
+    }
+
+    // espera animação (3s)
+    setTimeout(() => {
+        overlay.classList.add("hidden");
+        overlay.style.display = "none";
+        callback(); // chama a função que realmente adiciona estrelas
+    }, 3000);
+}
