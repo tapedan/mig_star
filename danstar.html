@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DanStar • Gerador de Transferência</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+</head>
+
+<body class="bg-[#0b0b0d] text-gray-200 min-h-screen flex items-center justify-center">
+
+  <div class="w-full max-w-md bg-[#111114] border border-gray-700 rounded-2xl p-7 shadow-xl">
+
+    <h1 class="text-3xl font-bold text-blue-400 mb-4 text-center">
+      Dan<span class="text-white">Star</span> ⚡
+    </h1>
+
+    <p class="text-gray-400 text-center mb-6">
+      Gerador oficial de QR para MigStar
+    </p>
+
+    <!-- Campo de valor -->
+    <label class="block mb-2 text-gray-300">Quantidade de Estrelas</label>
+    <input
+      id="amountInput"
+      type="number"
+      placeholder="Ex: 25"
+      class="w-full mb-5 p-3 rounded-xl bg-[#1b1b1f] border border-gray-600 text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
+    />
+
+    <!-- Campo de senha -->
+    <label class="block mb-2 text-gray-300">Senha secreta</label>
+    <input
+      id="secretInput"
+      type="password"
+      placeholder="Ex: 2009"
+      class="w-full mb-6 p-3 rounded-xl bg-[#1b1b1f] border border-gray-600 text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
+    />
+
+    <!-- Botão -->
+    <button
+      id="generateBtn"
+      class="w-full bg-blue-600 hover:bg-blue-500 transition text-white py-3 rounded-xl text-lg font-semibold mb-6"
+    >
+      Gerar QR Code
+    </button>
+
+    <!-- Área do QR -->
+    <div id="qrArea" class="flex justify-center mt-4"></div>
+
+  </div>
+
+<script>
+document.getElementById("generateBtn").addEventListener("click", () => {
+  const amount = parseInt(document.getElementById("amountInput").value);
+  const secret = document.getElementById("secretInput").value;
+
+  if (!amount || amount <= 0) {
+    alert("Informe um valor válido!");
+    return;
+  }
+
+  if (!secret || secret.length < 2) {
+    alert("Digite sua senha secreta!");
+    return;
+  }
+
+  // assinatura simples
+  const authHash = btoa(secret).slice(0, 10);
+
+  const payload = {
+    type: "migstar_transfer_v2",
+    amount,
+    auth: authHash,
+    timestamp: Date.now()
+  };
+
+  const encoded = btoa(JSON.stringify(payload));
+
+  const qrArea = document.getElementById("qrArea");
+  qrArea.innerHTML = ""; // limpa QR antigo
+
+  new QRCode(qrArea, {
+    text: encoded,
+    width: 240,
+    height: 240,
+    colorDark: "#ffffff",
+    colorLight: "#0b0b0d",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+});
+</script>
+
+</body>
+</html>
