@@ -35,6 +35,31 @@
   /* pequeno estilo para toasts usados no wrapper */
   #mig-toast { position: fixed; right: 1rem; bottom: 1rem; background: #10b981; color: white; padding: .75rem 1rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,0.15); display:none; z-index:9999; }
   #mig-toast.show { display:block; animation: fadeInOut 3s ease-in-out forwards; }
+#receivingOverlay {
+    display: none;
+}
+
+.stars-animation {
+    position: relative;
+    width: 200px;
+    height: 200px;
+}
+
+.stars-animation::before {
+    content: "★";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 40px;
+    color: gold;
+    animation: explode 1s ease-out infinite;
+}
+
+@keyframes explode {
+    0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
 </style>
 </head>
 <body class="min-h-screen">
@@ -116,8 +141,7 @@
             <button id="receiveBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg">Receber Estrelas</button>
             <hr class="my-6 border-blue-200">
             <h3 class="text-lg font-semibold text-blue-600 mb-2">Transferir via QR Code</h3>
-            <button id="generateQRBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-3 px-4 rounded-lg mb-3">
-              Gerar QR Code
+            <button id="generateQRBtn"></button>
             </button>
             <button id="scanQRBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg">
               Ler QR Code
@@ -179,6 +203,19 @@
     <button id="closeQR" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg mt-2">Fechar</button>
   </div>
 </div>
+
+<!-- OVERLAY DE RECEBIMENTO -->
+<div id="receivingOverlay"
+     class="fixed inset-0 bg-black bg-opacity-70 flex-col gap-4 items-center justify-center hidden z-[9999]">
+    
+    <div class="text-center text-white text-3xl font-bold animate-pulse">
+        RECEBENDO ESTRELAS...
+    </div>
+
+    <div class="stars-animation"></div>
+</div>
+
+<audio id="receiveSound" src="efeito.mp3Z"></audio>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
