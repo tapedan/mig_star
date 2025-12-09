@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mig Star</title>
+<script src="script.js" defer></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+<style>
+  :root {
+    --primary: #3b82f6;
+    --primary-light: #93c5fd;
+    --primary-dark: #1d4ed8;
+    --accent: #f59e0b;
+    --background: #f8fafc;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --success: #10b981;
+    --error: #ef4444;
+  }
+  body { font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif; background-color: var(--background); color: var(--text); }
+  .star-animation { animation: starPulse 0.5s ease-in-out; }
+  @keyframes starPulse { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+  .toast { animation: fadeInOut 3s ease-in-out forwards; }
+  @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px);} 10% { opacity:1; transform:translateY(0);} 90%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-20px);} }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; animation:fadeIn 0.3s ease-in-out; }
+  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+  .mission-card { transition: all 0.3s ease; }
+  .mission-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+  .mission-complete { background-color: rgba(16,185,129,0.1); border-color: var(--success); }
+  .transaction-item { border-left: 4px solid var(--primary); }
+  .mission-item { border-left: 4px solid var(--accent); }
+  /* pequeno estilo para toasts usados no wrapper */
+  #mig-toast { position: fixed; right: 1rem; bottom: 1rem; background: #10b981; color: white; padding: .75rem 1rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,0.15); display:none; z-index:9999; }
+  #mig-toast.show { display:block; animation: fadeInOut 3s ease-in-out forwards; }
+</style>
+</head>
+<body class="min-h-screen">
+  <!-- Variáveis públicas -->
+  <script>const STAR_NAME='MigStar'; const STAR_SYMBOL='★';</script>
+
+  <div class="container mx-auto px-4 py-8 max-w-3xl">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-blue-600 mb-2">Mig Star</h1>
+      <p class="text-blue-400">Miguel Ui 8 ⭐</p>
+    </header>
+
+    <div class="bg-white rounded-xl shadow-md p-6 mb-8 text-center">
+      <h2 class="text-xl text-blue-500 mb-2">Saldo Atual</h2>
+      <div class="flex justify-center items-center">
+        <span id="starSymbol" class="text-4xl text-yellow-500 mr-2">★</span>
+        <span id="userBalance" class="text-5xl font-bold text-blue-800">50</span>
+      </div>
+      <p class="text-blue-400 mt-2">Olá, <span id="userName" class="font-semibold">Miguel</span>!</p>
+    </div>
+
+    <div class="flex border-b border-blue-200 mb-6">
+      <button class="tab-btn py-2 px-4 font-medium text-blue-600 border-b-2 border-blue-600" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="missions">Missões</button>
+      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="transfer">Transferir</button>
+      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="history">Histórico</button>
+    </div>
+
+    <div id="tabContents">
+      <div id="dashboard" class="tab-content active">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-blue-600 mb-4">Bem-vindo ao Mig Star!</h2>
+          <p class="text-blue-500 mb-4">Complete missões diárias para ganhar mais estrelas e aprenda a gerenciar seu dinheiro de forma divertida!</p>
+
+          <div class="bg-blue-50 rounded-lg p-4 mb-4">
+            <h3 class="font-medium text-blue-600 mb-2">Progresso do Dia</h3>
+            <div class="w-full bg-blue-200 rounded-full h-4 mb-2">
+              <div id="missionProgress" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-blue-500"><span id="completedMissionsCount">0</span> de 3 missões completadas hoje</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <h3 class="font-medium text-blue-600 mb-2">Última Transação</h3>
+              <div id="lastTransaction" class="text-blue-500">Nenhuma transação ainda</div>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-4">
+              <h3 class="font-medium text-blue-600 mb-2">Missão Recente</h3>
+              <div id="lastMission" class="text-blue-500">Nenhuma missão completada ainda</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="missions" class="tab-content">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-blue-600 mb-4">Missões do Dia</h2>
+          <p class="text-blue-500 mb-4">Complete as missões para ganhar mais estrelas! Todo dia você recebe estrelas, para trocar por coisas na loja Mig Apps.</p>
+
+          <div id="missionsContainer" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <div id="transfer" class="tab-content">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-blue-600 mb-4">Transferir Estrelas</h2>
+          <div class="space-y-4">
+            <div>
+              <label for="sender" class="block text-sm font-medium text-blue-500 mb-1">Remetente</label>
+              <select id="sender" class="w-full p-3 border border-blue-300 rounded-lg">
+                <option>Danilo Jorge</option>
+              </select>
+            </div>
+            <div>
+              <label for="amount" class="block text-sm font-medium text-blue-500 mb-1">Quantidade</label>
+              <input type="number" id="amount" min="1" class="w-full p-3 border border-blue-300 rounded-lg" placeholder="Quantidade de estrelas">
+            </div>
+            <button id="receiveBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg">Receber Estrelas</button>
+            <hr class="my-6 border-blue-200">
+            <h3 class="text-lg font-semibold text-blue-600 mb-2">Transferir via QR Code</h3>
+            <button id="generateQRBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-3 px-4 rounded-lg mb-3">
+              Gerar QR Code
+            </button>
+            <button id="scanQRBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg">
+              Ler QR Code
+            </button>
+            <div class="text-sm text-blue-500 mt-2"><p>Transições de ponta a ponta</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="history" class="tab-content">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold text-blue-600 mb-4">Histórico</h2>
+          <div class="flex mb-4">
+            <button id="showAll" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">Tudo</button>
+            <button id="showTransactions" class="px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-600">Transações</button>
+            <button id="showMissions" class="px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-600">Missões</button>
+          </div>
+          <div id="historyContainer" class="space-y-3 max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden toast"></div>
+
+    <div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+        <h3 class="text-xl font-semibold text-blue-600 mb-4">Digite a Senha</h3>
+        <input type="password" id="passwordInput" class="w-full p-3 border border-blue-300 rounded-lg mb-4" placeholder="Senha">
+        <div class="flex space-x-3">
+          <button id="confirmPassword" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Confirmar</button>
+          <button id="cancelPassword" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">Cancelar</button>
+        </div>
+        <p id="passwordError" class="text-red-500 text-sm mt-2 hidden">Senha incorreta!</p>
+      </div>
+    </div>
+
+    <div class="hidden md:block mt-8 pt-4 border-t border-gray-200">
+      <button id="resetBtn" class="text-sm text-red-500 hover:text-red-700">Resetar MigStar</button>
+    </div>
+  </div>
+
+  <!-- toast minimal para wrapper -->
+  <div id="mig-toast"></div>
+
+  <!-- ===========================
+       SCRIPT ADAPTADO PARA WEBVIEW
+       =========================== -->
+
+<!-- Modal de QR Code -->
+<div id="qrModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-xl p-6 w-80 text-center">
+
+    <h3 class="text-xl font-semibold text-blue-600 mb-4">QR Code</h3>
+
+    <div id="qrCodeArea" class="flex justify-center mb-4"></div>
+
+    <video id="qrVideo" class="hidden w-full rounded-lg mb-4"></video>
+
+    <button id="closeQR" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg mt-2">Fechar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+</body>
+</html>
