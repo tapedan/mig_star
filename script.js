@@ -545,44 +545,50 @@ function setupEventListeners() {
   // ======================================================
   elements.scanQRBtn.addEventListener("click", startScanning);
 
-  function startScanning() {
+function startScanning() {
     elements.qrCodeArea.innerHTML = "";
     elements.qrVideo.classList.remove("hidden");
 
     navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment",
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
+        video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
     })
     .then(stream => {
-      elements.qrVideo.srcObject = stream;
+        elements.qrVideo.srcObject = stream;
 
-      elements.qrVideo.onloadeddata = () => {
-        scanActive = true;
-        scanLoop();
-      };
+        elements.qrVideo.onloadedmetadata = () => {
+            elements.qrVideo.play();
+        };
 
-      elements.qrModal.classList.remove("hidden");
+        elements.qrVideo.onloadeddata = () => {
+            scanActive = true;
+            scanLoop();
+        };
+
+        elements.qrModal.classList.remove("hidden");
     })
-    .catch(e => {
-      console.error(e);
-      showToast("Câmera não disponível!", false);
+    .catch(() => {
+        showToast("Câmera não disponível!", false);
     });
-  }
+}
+
 
   // ======================================================
   // === LOOP DE LEITURA — 60 FPS, ESPERA VÍDEO ===========
   // ======================================================
-  function scanLoop() {
+function scanLoop() {
     if (!scanActive) return;
 
     const video = elements.qrVideo;
 
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      scanFrame = requestAnimationFrame(scanLoop);
-      return;
+    // AQUI está o pulo do gato:
+    // o Android às vezes ativa a camera mas demora 200–500ms pra mandar o vídeo
+    if (video.readyState < 2 || video.videoWidth === 0) {
+        scanFrame = requestAnimationFrame(scanLoop);
+        return;
     }
 
     const canvas = document.createElement("canvas");
@@ -594,45 +600,25 @@ function setupEventListeners() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const qr = jsQR(frame.data, canvas.width, canvas.height, {
-      inversionAttempts: "dontInvert"
-    });
+    const qr = jsQR(frame.data, canvas.width, canvas.height);
 
     if (qr) {
-      scanActive = false;
-      stopCamera();
+        scanActive = false;
+        stopCamera();
 
-      try {
-        const data = JSON.parse(atob(qr.data));
-
-        if (data.type === "migstar_transfer") {
-
-          // pedir senha
-          elements.passwordModal.classList.remove("hidden");
-          elements.passwordInput.focus();
-          elements.passwordError.classList.add("hidden");
-
-          elements.confirmPassword.onclick = () => {
-            if (elements.passwordInput.value === "2009") {
-              elements.passwordModal.classList.add("hidden");
-              receiveStars(data.amount);
-            } else {
-              elements.passwordError.classList.remove("hidden");
-            }
-          };
-
+        try {
+            const decoded = JSON.parse(atob(qr.data));
+            handleQR(decoded);
+        } catch (err) {
+            showToast("QR inválido!", false);
         }
 
-      } catch (e) {
-        console.error("QR inválido", e);
-        showToast("QR inválido!", false);
-      }
-
-      return;
+        return;
     }
 
     scanFrame = requestAnimationFrame(scanLoop);
-  }
+}
+
 
   // ======================================================
   // === RESTO DAS FUNÇÕES ORIGINAIS ======================
