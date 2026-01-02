@@ -2,223 +2,624 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Mig Star</title>
-<script src="script.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+
 <style>
   :root {
-    --primary: #3b82f6;
-    --primary-light: #93c5fd;
-    --primary-dark: #1d4ed8;
-    --accent: #f59e0b;
-    --background: #f8fafc;
-    --text: #1e293b;
-    --text-light: #64748b;
-    --success: #10b981;
-    --error: #ef4444;
+    --primary: #4f46e5; /* Roxo/Indigo vibrante */
+    --primary-light: #818cf8;
+    --bg-app: #ffffff;
+    --bg-card: #eef0f4; /* Cinza claro dos cards */
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --star-color: #facc15;
   }
-  body { font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif; background-color: var(--background); color: var(--text); }
-  .star-animation { animation: starPulse 0.5s ease-in-out; }
-  @keyframes starPulse { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
-  .toast { animation: fadeInOut 3s ease-in-out forwards; }
-  @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px);} 10% { opacity:1; transform:translateY(0);} 90%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-20px);} }
-  .tab-content { display:none; }
-  .tab-content.active { display:block; animation:fadeIn 0.3s ease-in-out; }
-  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
-  .mission-card { transition: all 0.3s ease; }
-  .mission-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-  .mission-complete { background-color: rgba(16,185,129,0.1); border-color: var(--success); }
-  .transaction-item { border-left: 4px solid var(--primary); }
-  .mission-item { border-left: 4px solid var(--accent); }
-  /* pequeno estilo para toasts usados no wrapper */
-  #mig-toast { position: fixed; right: 1rem; bottom: 1rem; background: #10b981; color: white; padding: .75rem 1rem; border-radius: .5rem; box-shadow: 0 6px 18px rgba(0,0,0,0.15); display:none; z-index:9999; }
-  #mig-toast.show { display:block; animation: fadeInOut 3s ease-in-out forwards; }
-#receivingOverlay {
-    display: none;
-}
+  
+  body { 
+    font-family: 'Inter', sans-serif; 
+    background-color: var(--bg-app); 
+    color: var(--text-main); 
+    -webkit-tap-highlight-color: transparent;
+  }
 
-.stars-animation {
-    position: relative;
-    width: 200px;
-    height: 200px;
-}
+  /* Classes utilitárias personalizadas para o design */
+  .card-gray {
+    background-color: var(--bg-card);
+    border-radius: 1rem; /* Rounded-2xl */
+  }
 
-.stars-animation::before {
-    content: "★";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    font-size: 40px;
-    color: gold;
+  .btn-pill {
+    border-radius: 9999px;
+  }
+
+  .text-brand {
+    color: #4338ca; /* Tom de azul/roxo do título */
+  }
+
+  /* Animações originais mantidas e suavizadas */
+  .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+  .slide-up { animation: slideUp 0.4s ease-out forwards; }
+  
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+  /* Avatar Circle */
+  .avatar-circle {
+    background: linear-gradient(135deg, #4f46e5, #2563eb);
+    color: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+  }
+
+  /* Progress Bar Container */
+  .progress-bg {
+    background-color: #a5b4fc; /* Roxo claro */
+    border-radius: 9999px;
+    height: 1.5rem;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background-color: #4f46e5; /* Roxo escuro */
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease;
+  }
+
+  /* Overlay de recebimento */
+  #receivingOverlay { display: none; }
+  .stars-animation { position: relative; width: 200px; height: 200px; }
+  .stars-animation::before {
+    content: "★"; position: absolute; left: 50%; top: 50%;
+    font-size: 60px; color: gold;
     animation: explode 1s ease-out infinite;
-}
-
-@keyframes explode {
+  }
+  @keyframes explode {
     0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
     100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-}
+  }
 
+  /* Toast Notification */
+  #mig-toast {
+    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: white; padding: 12px 24px;
+    border-radius: 50px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    z-index: 9999; display: none; font-size: 14px; font-weight: 500;
+    white-space: nowrap;
+  }
+  #mig-toast.show { display: block; animation: toastSlide 3s ease-in-out forwards; }
+  @keyframes toastSlide {
+    0% { opacity:0; transform: translate(-50%, -20px); }
+    10% { opacity:1; transform: translate(-50%, 0); }
+    90% { opacity:1; transform: translate(-50%, 0); }
+    100% { opacity:0; transform: translate(-50%, -20px); }
+  }
 </style>
 </head>
-<body class="min-h-screen">
-  <!-- Variáveis públicas -->
+<body class="min-h-screen flex flex-col relative pb-safe">
+
   <script>const STAR_NAME='MigStar'; const STAR_SYMBOL='★';</script>
 
-  <div class="container mx-auto px-4 py-8 max-w-3xl">
-    <header class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-blue-600 mb-2">Mig Star</h1>
-      <p class="text-blue-400">Miguel Ui 8 ⭐</p>
-    </header>
+  <div id="mig-toast">Notificação</div>
 
-    <div class="bg-white rounded-xl shadow-md p-6 mb-8 text-center">
-      <h2 class="text-xl text-blue-500 mb-2">Saldo Atual</h2>
-      <div class="flex justify-center items-center">
-        <span id="starSymbol" class="text-4xl text-yellow-500 mr-2">★</span>
-        <span id="userBalance" class="text-5xl font-bold text-blue-800">50</span>
-      </div>
-      <p class="text-blue-400 mt-2">Olá, <span id="userName" class="font-semibold">Miguel</span>!</p>
+  <header class="flex justify-between items-center px-6 py-6 bg-white sticky top-0 z-30">
+    <h1 class="text-3xl font-extrabold text-blue-600 tracking-tight">MIG STAR</h1>
+    <div class="flex items-center gap-3">
+        <button onclick="app.showHistory()" class="text-gray-400 hover:text-blue-600">
+            <i data-feather="clock" width="20"></i>
+        </button>
+        <div class="avatar-circle">M</div>
     </div>
+  </header>
 
-    <div class="flex border-b border-blue-200 mb-6">
-      <button class="tab-btn py-2 px-4 font-medium text-blue-600 border-b-2 border-blue-600" data-tab="dashboard">Dashboard</button>
-      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="missions">Missões</button>
-      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="transfer">Transferir</button>
-      <button class="tab-btn py-2 px-4 font-medium text-blue-500 hover:text-blue-600" data-tab="history">Histórico</button>
-    </div>
-
-    <div id="tabContents">
-      <div id="dashboard" class="tab-content active">
-        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 class="text-xl font-semibold text-blue-600 mb-4">Bem-vindo ao Mig Star!</h2>
-          <p class="text-blue-500 mb-4">Complete missões diárias para ganhar mais estrelas e aprenda a gerenciar seu dinheiro de forma divertida!</p>
-
-          <div class="bg-blue-50 rounded-lg p-4 mb-4">
-            <h3 class="font-medium text-blue-600 mb-2">Progresso do Dia</h3>
-            <div class="w-full bg-blue-200 rounded-full h-4 mb-2">
-              <div id="missionProgress" class="bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
-            </div>
-            <p class="text-sm text-blue-500"><span id="completedMissionsCount">0</span> de 3 missões completadas hoje</p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-blue-50 rounded-lg p-4">
-              <h3 class="font-medium text-blue-600 mb-2">Última Transação</h3>
-              <div id="lastTransaction" class="text-blue-500">Nenhuma transação ainda</div>
-            </div>
-            <div class="bg-blue-50 rounded-lg p-4">
-              <h3 class="font-medium text-blue-600 mb-2">Missão Recente</h3>
-              <div id="lastMission" class="text-blue-500">Nenhuma missão completada ainda</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="missions" class="tab-content">
-        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 class="text-xl font-semibold text-blue-600 mb-4">Missões do Dia</h2>
-          <p class="text-blue-500 mb-4">Complete as missões para ganhar mais estrelas! Todo dia você recebe estrelas, para trocar por coisas na loja Mig Apps.</p>
-
-          <div id="missionsContainer" class="space-y-4"></div>
-        </div>
-      </div>
-
-      <div id="transfer" class="tab-content">
-        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 class="text-xl font-semibold text-blue-600 mb-4">Transferir Estrelas</h2>
-          <div class="space-y-4">
-            <div>
-              <label for="sender" class="block text-sm font-medium text-blue-500 mb-1">Remetente</label>
-              <select id="sender" class="w-full p-3 border border-blue-300 rounded-lg">
-                <option>Danilo Jorge</option>
-              </select>
-            </div>
-            <div>
-              <label for="amount" class="block text-sm font-medium text-blue-500 mb-1">Quantidade</label>
-              <input type="number" id="amount" min="1" class="w-full p-3 border border-blue-300 rounded-lg" placeholder="Quantidade de estrelas">
-            </div>
-            <button id="receiveBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg">Receber Estrelas</button>
-            <hr class="my-6 border-blue-200">
-            <h3 class="text-lg font-semibold text-blue-600 mb-2">Transferir via QR Code</h3>
-            <button id="generateQRBtn"></button>
-            </button>
-            <button id="scanQRBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg">
-              Ler QR Code
-            </button>
-            <div class="text-sm text-blue-500 mt-2"><p>Transições de ponta a ponta</p></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="history" class="tab-content">
-        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 class="text-xl font-semibold text-blue-600 mb-4">Histórico</h2>
-          <div class="flex mb-4">
-            <button id="showAll" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">Tudo</button>
-            <button id="showTransactions" class="px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-600">Transações</button>
-            <button id="showMissions" class="px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-600">Missões</button>
-          </div>
-          <div id="historyContainer" class="space-y-3 max-h-96 overflow-y-auto"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hidden toast"></div>
-
-    <div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-xl p-6 max-w-sm w-full">
-        <h3 class="text-xl font-semibold text-blue-600 mb-4">Digite a Senha</h3>
-        <input type="password" id="passwordInput" class="w-full p-3 border border-blue-300 rounded-lg mb-4" placeholder="Senha">
-        <div class="flex space-x-3">
-          <button id="confirmPassword" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Confirmar</button>
-          <button id="cancelPassword" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">Cancelar</button>
-        </div>
-        <p id="passwordError" class="text-red-500 text-sm mt-2 hidden">Senha incorreta!</p>
-      </div>
-    </div>
-
-    <div class="hidden md:block mt-8 pt-4 border-t border-gray-200">
-      <button id="resetBtn" class="text-sm text-red-500 hover:text-red-700">Resetar MigStar</button>
-    </div>
-  </div>
-
-  <!-- toast minimal para wrapper -->
-  <div id="mig-toast"></div>
-
-  <!-- ===========================
-       SCRIPT ADAPTADO PARA WEBVIEW
-       =========================== -->
-
-<!-- Modal de QR Code -->
-<div id="qrModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-  <div class="bg-white rounded-xl p-6 w-80 text-center">
-
-    <h3 class="text-xl font-semibold text-blue-600 mb-4">QR Code</h3>
-
-    <div id="qrCodeArea" class="flex justify-center mb-4"></div>
-
-    <video id="qrVideo" class="hidden w-full rounded-lg mb-4"></video>
-
-    <button id="closeQR" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg mt-2">Fechar</button>
-  </div>
-</div>
-
-<!-- OVERLAY DE RECEBIMENTO -->
-<div id="receivingOverlay"
-     class="fixed inset-0 bg-black bg-opacity-70 flex-col gap-4 items-center justify-center hidden z-[9999]">
+  <main id="mainContainer" class="flex-1 px-6 pb-8 max-w-md mx-auto w-full">
     
-    <div class="text-center text-white text-3xl font-bold animate-pulse">
-        RECEBENDO ESTRELAS...
+    <div id="view-dashboard" class="fade-in">
+        
+        <div class="mb-6">
+            <button onclick="app.switchView('transfer')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-full text-sm transition-colors">
+                Transferir
+            </button>
+        </div>
+
+        <div class="card-gray p-6 mb-6 flex items-center shadow-sm">
+            <div class="text-yellow-400 drop-shadow-sm mr-3">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+            </div>
+            <span id="dashBalance" class="text-5xl font-bold text-blue-600 tracking-tight">0</span>
+        </div>
+
+        <div class="card-gray p-6 mb-6 shadow-sm">
+            <div class="flex justify-between items-end mb-2 border-b border-gray-300 pb-2">
+                <h3 class="text-lg font-medium text-gray-700">Atualizações do dia</h3>
+            </div>
+            
+            <div onclick="app.toggleMissionsView()" class="cursor-pointer">
+                <p class="text-gray-600 mb-3 text-sm font-medium">Missões do dia</p>
+                
+                <div class="progress-bg w-full mb-3 relative">
+                    <div id="missionProgressBar" class="progress-fill" style="width: 0%"></div>
+                </div>
+
+                <p id="missionText" class="text-sm text-gray-600 font-medium">Você já fez 0/3 missões!</p>
+            </div>
+
+            <div id="missionsListExpand" class="hidden mt-4 space-y-3 border-t border-gray-300 pt-3">
+                </div>
+        </div>
+
+        <div class="card-gray p-6 shadow-sm">
+            <div class="mb-4 border-b border-gray-300 pb-2">
+                <h3 class="text-lg font-medium text-gray-700">Comprar</h3>
+            </div>
+            
+            <div class="bg-white rounded-xl p-4 shadow-sm w-40 flex flex-col justify-between h-48">
+                <span class="text-sm font-medium text-gray-600">Noite de jogos</span>
+                
+                <div class="mt-auto">
+                    <div class="w-full h-16 bg-purple-100 rounded-lg mb-3 flex items-center justify-center text-purple-400">
+                        <i data-feather="monitor"></i>
+                    </div>
+                    <button onclick="app.buyItem(400, 'Noite de Jogos')" class="bg-indigo-600 text-white font-bold py-1 px-4 rounded-full text-sm w-full flex items-center justify-center gap-1">
+                        <span class="text-yellow-300 text-xs">★</span> 400
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
+    <div id="view-transfer" class="hidden">
+        
+        <div class="mb-6">
+            <button onclick="app.switchView('dashboard')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-6 rounded-full text-sm flex items-center gap-2 transition-colors">
+                Voltar
+            </button>
+        </div>
+
+        <div class="card-gray p-6 mb-6 flex flex-col items-center justify-center py-8 shadow-sm">
+            <p class="text-sm text-gray-500 mb-2 font-medium">Seu saldo disponível</p>
+            <div class="flex items-center">
+                <span class="text-yellow-400 text-3xl mr-2">★</span>
+                <span id="transferBalance" class="text-4xl font-bold text-blue-600">0</span>
+            </div>
+        </div>
+
+        <div class="card-gray p-5 mb-4 shadow-sm">
+            <div class="border-b border-gray-300 pb-2 mb-3">
+                <h3 class="text-gray-700 font-medium">Fazer transferência</h3>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-500">De <span class="text-gray-800 font-semibold">Danilo</span></p>
+                <p class="text-sm text-gray-500">Para <span class="text-gray-800 font-semibold">Miguel</span></p>
+            </div>
+
+            <button id="scanQRBtn" class="w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-full text-sm transition shadow-md">
+                Ler QR
+            </button>
+        </div>
+
+        <div class="card-gray p-5 shadow-sm">
+            <div class="border-b border-gray-300 pb-2 mb-3">
+                <h3 class="text-gray-700 font-medium">Fazer transferência</h3>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-500">De <span class="text-gray-800 font-semibold">Miguel</span></p>
+                <p class="text-sm text-gray-500">Para <span class="text-gray-800 font-semibold">Danilo</span></p>
+            </div>
+
+            <div class="flex gap-2">
+                <input type="number" id="sendAmountInput" placeholder="Insira o valor" class="bg-indigo-600 placeholder-indigo-300 text-white px-4 py-2 rounded-full text-sm outline-none w-full border border-indigo-500 focus:ring-2 focus:ring-indigo-300">
+                <button onclick="app.sendStars()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full aspect-square flex items-center justify-center shadow-md">
+                    <i data-feather="arrow-right" width="16"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-history" class="hidden mt-4">
+        <h2 class="text-xl font-bold text-blue-600 mb-4 px-2">Histórico</h2>
+        <div id="historyList" class="space-y-3 pb-10"></div>
+        <button onclick="app.switchView('dashboard')" class="mt-4 w-full py-3 text-gray-500 text-sm">Fechar Histórico</button>
+    </div>
+
+  </main>
+
+  <div id="qrModal" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center hidden z-50">
+    <h3 class="text-white font-bold text-xl mb-4">Escaneando...</h3>
+    <div class="relative w-64 h-64 bg-black rounded-xl overflow-hidden border-4 border-indigo-500 shadow-2xl">
+         <video id="qrVideo" class="w-full h-full object-cover"></video>
+         <div class="absolute inset-0 border-2 border-white opacity-30 m-8"></div>
+    </div>
+    <button id="closeQR" class="mt-8 bg-white text-gray-900 py-3 px-8 rounded-full font-bold">Cancelar</button>
+  </div>
+
+  <div id="receivingOverlay" class="fixed inset-0 bg-black bg-opacity-90 flex-col gap-4 items-center justify-center hidden z-[9999]">
+    <div class="text-center text-white text-2xl font-bold animate-pulse">RECEBENDO ESTRELAS!</div>
     <div class="stars-animation"></div>
-</div>
+  </div>
 
-<audio id="receiveSound" src="efeito.mp3Z"></audio>
+  <div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 px-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+      <h3 class="text-xl font-bold text-gray-800 mb-2">Confirmar</h3>
+      <p class="text-gray-500 text-sm mb-4">Digite a senha para confirmar esta ação.</p>
+      <input type="password" id="passwordInput" class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl mb-4 text-center text-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••">
+      <div class="flex space-x-3">
+        <button id="cancelPassword" class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl">Cancelar</button>
+        <button id="confirmPassword" class="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl">Confirmar</button>
+      </div>
+      <p id="passwordError" class="text-red-500 text-xs mt-3 text-center hidden">Senha incorreta!</p>
+    </div>
+  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <audio id="receiveSound" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
 
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+  <script>
+    feather.replace();
+
+    /** STORAGE ENGINE (Persistência Robusta) **/
+    (function() {
+      const storage = {
+        _cache: {},
+        getItem(key){ return this._cache[key] || localStorage.getItem(key); },
+        setItem(key, value){ this._cache[key] = String(value); localStorage.setItem(key, value); },
+        removeItem(key){ delete this._cache[key]; localStorage.removeItem(key); }
+      };
+      // Carregar cache inicial
+      for(let i=0; i<localStorage.length; i++){
+          const k = localStorage.key(i);
+          storage._cache[k] = localStorage.getItem(k);
+      }
+      window.storage = storage;
+    })();
+
+    /** CORE APPLICATION **/
+    const app = {
+        state: {
+            user: null,
+            missions: [],
+            todayMissions: [],
+            transactions: [],
+            history: [],
+            todayDate: new Date().toISOString().split('T')[0]
+        },
+        
+        elements: {
+            dashBalance: document.getElementById('dashBalance'),
+            transferBalance: document.getElementById('transferBalance'),
+            missionBar: document.getElementById('missionProgressBar'),
+            missionText: document.getElementById('missionText'),
+            missionsList: document.getElementById('missionsListExpand'),
+            historyList: document.getElementById('historyList'),
+            sendInput: document.getElementById('sendAmountInput'),
+            qrVideo: document.getElementById('qrVideo')
+        },
+
+        init: async function() {
+            this.loadState();
+            this.checkNewDay();
+            this.render();
+            this.setupQR();
+            this.setupPasswordModal();
+        },
+
+        loadState: function() {
+            const s = window.storage;
+            
+            // User
+            let userRaw = s.getItem('migstar_user');
+            this.state.user = userRaw ? JSON.parse(userRaw) : { 
+                name: "Miguel", stars: 50, lastAssignedDate: this.state.todayDate, completedMissionsToday: [] 
+            };
+
+            // Mission Pool (Padrão)
+            let poolRaw = s.getItem('migstar_missionPool');
+            const defaultMissions = [
+                { id: 1, title: "Arrumar a cama", reward: 10 },
+                { id: 2, title: "Escovar os dentes", reward: 5 },
+                { id: 3, title: "Ler 10 páginas", reward: 10 },
+                { id: 4, title: "Fazer exercícios", reward: 10 },
+                { id: 5, title: "Arrumar o quarto", reward: 10 },
+                { id: 6, title: "Ajudar no jantar", reward: 5 },
+                { id: 7, title: "Lição de casa", reward: 15 },
+                { id: 8, title: "Organizar brinquedos", reward: 5 }
+            ];
+            this.state.missions = poolRaw ? JSON.parse(poolRaw) : defaultMissions;
+
+            // Today Missions
+            let todayRaw = s.getItem('migstar_todayMissions');
+            this.state.todayMissions = todayRaw ? JSON.parse(todayRaw) : [];
+
+            // History & Transactions
+            let histRaw = s.getItem('migstar_history');
+            this.state.history = histRaw ? JSON.parse(histRaw) : [];
+        },
+
+        save: function() {
+            const s = window.storage;
+            s.setItem('migstar_user', JSON.stringify(this.state.user));
+            s.setItem('migstar_todayMissions', JSON.stringify(this.state.todayMissions));
+            s.setItem('migstar_history', JSON.stringify(this.state.history));
+        },
+
+        checkNewDay: function() {
+            if (this.state.user.lastAssignedDate !== this.state.todayDate || this.state.todayMissions.length === 0) {
+                // Reset daily
+                this.state.user.lastAssignedDate = this.state.todayDate;
+                this.state.user.completedMissionsToday = [];
+                
+                // Assign 3 random missions
+                const shuffled = [...this.state.missions].sort(() => 0.5 - Math.random());
+                this.state.todayMissions = shuffled.slice(0, 3);
+                this.save();
+            }
+        },
+
+        /** UI LOGIC **/
+        render: function() {
+            // Balance Update
+            this.elements.dashBalance.textContent = this.state.user.stars;
+            this.elements.transferBalance.textContent = this.state.user.stars;
+
+            // Missions Progress
+            const total = 3;
+            const completed = this.state.user.completedMissionsToday.length;
+            const pct = (completed / total) * 100;
+            
+            this.elements.missionBar.style.width = `${pct}%`;
+            this.elements.missionText.innerHTML = `Você já fez <b>${completed}/${total}</b> missões!`;
+
+            // Render Mission List
+            this.elements.missionsList.innerHTML = '';
+            this.state.todayMissions.forEach(m => {
+                const isDone = this.state.user.completedMissionsToday.includes(m.id);
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-lg border flex justify-between items-center ${isDone ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`;
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium text-sm text-gray-800">${m.title}</p>
+                        <p class="text-xs text-indigo-500 font-bold">+${m.reward} ★</p>
+                    </div>
+                    ${!isDone ? `<button onclick="app.completeMission(${m.id})" class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full hover:bg-indigo-200">Concluir</button>` : `<i data-feather="check" class="text-green-500" width="16"></i>`}
+                `;
+                this.elements.missionsList.appendChild(div);
+            });
+            feather.replace();
+        },
+
+        switchView: function(viewName) {
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-transfer').classList.add('hidden');
+            document.getElementById('view-history').classList.add('hidden');
+            
+            const target = document.getElementById(`view-${viewName}`);
+            target.classList.remove('hidden');
+            target.classList.add('fade-in');
+            
+            // Scroll to top
+            window.scrollTo(0,0);
+        },
+
+        showHistory: function() {
+            this.switchView('history');
+            const container = this.elements.historyList;
+            container.innerHTML = '';
+            
+            if(this.state.history.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 mt-4">Nada aqui ainda.</p>';
+                return;
+            }
+
+            this.state.history.forEach(h => {
+                const isGain = h.type === 'mission' || h.type === 'receive';
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center";
+                div.innerHTML = `
+                    <div>
+                        <p class="font-medium text-gray-800 text-sm">${h.title || (h.type === 'receive' ? 'Recebido' : 'Enviado')}</p>
+                        <p class="text-xs text-gray-400">${new Date(h.date).toLocaleDateString()} - ${new Date(h.date).toLocaleTimeString().slice(0,5)}</p>
+                    </div>
+                    <span class="font-bold ${isGain ? 'text-green-500' : 'text-red-500'}">
+                        ${isGain ? '+' : '-'}${h.amount}
+                    </span>
+                `;
+                container.appendChild(div);
+            });
+        },
+
+        toggleMissionsView: function() {
+            this.elements.missionsList.classList.toggle('hidden');
+        },
+
+        toast: function(msg) {
+            const t = document.getElementById('mig-toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        },
+
+        /** ACTIONS **/
+        completeMission: function(id) {
+            const mission = this.state.todayMissions.find(m => m.id === id);
+            if (!mission) return;
+
+            this.state.user.stars += mission.reward;
+            this.state.user.completedMissionsToday.push(id);
+            this.state.history.unshift({
+                type: 'mission', title: mission.title, amount: mission.reward, date: new Date().toISOString()
+            });
+            
+            this.save();
+            this.render();
+            this.toast(`+${mission.reward} estrelas! Muito bem!`);
+            
+            // Play sound
+            try { document.getElementById('receiveSound').play(); } catch(e){}
+        },
+
+        receiveStars: function(amount) {
+            amount = parseInt(amount);
+            if (!amount) return;
+
+            // Visual effect
+            const overlay = document.getElementById('receivingOverlay');
+            overlay.style.display = 'flex';
+            try { document.getElementById('receiveSound').play(); } catch(e){}
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                this.state.user.stars += amount;
+                this.state.history.unshift({
+                    type: 'receive', title: 'Transferência de Danilo', amount: amount, date: new Date().toISOString()
+                });
+                this.save();
+                this.render();
+                this.toast(`Recebeu ${amount} estrelas!`);
+                this.switchView('dashboard');
+            }, 2500);
+        },
+
+        sendStars: function() {
+            const val = parseInt(this.elements.sendInput.value);
+            if (!val || val <= 0) return this.toast("Insira um valor válido");
+            if (val > this.state.user.stars) return this.toast("Saldo insuficiente!");
+
+            // Ask for password
+            this.requestPassword().then(() => {
+                this.state.user.stars -= val;
+                this.state.history.unshift({
+                    type: 'send', title: 'Enviado para Danilo', amount: val, date: new Date().toISOString()
+                });
+                this.save();
+                this.render();
+                this.elements.sendInput.value = "";
+                this.toast(`Enviou ${val} estrelas!`);
+                this.switchView('dashboard');
+            }).catch(() => {
+                // Cancelled or wrong password
+            });
+        },
+
+        buyItem: function(price, itemName) {
+            if (this.state.user.stars < price) return this.toast("Faltam estrelas!");
+            
+            this.requestPassword().then(() => {
+                this.state.user.stars -= price;
+                this.state.history.unshift({
+                    type: 'buy', title: `Comprou: ${itemName}`, amount: price, date: new Date().toISOString()
+                });
+                this.save();
+                this.render();
+                this.toast(`Comprou ${itemName}!`);
+            });
+        },
+
+        /** SECURITY & QR **/
+        passwordCallback: null,
+        setupPasswordModal: function() {
+            const modal = document.getElementById('passwordModal');
+            const input = document.getElementById('passwordInput');
+            const err = document.getElementById('passwordError');
+            
+            document.getElementById('confirmPassword').onclick = () => {
+                if (input.value === '1234') { // Senha simples hardcoded
+                    modal.classList.add('hidden');
+                    input.value = '';
+                    err.classList.add('hidden');
+                    if(this.passwordCallback) this.passwordCallback();
+                } else {
+                    err.classList.remove('hidden');
+                }
+            };
+            
+            document.getElementById('cancelPassword').onclick = () => {
+                modal.classList.add('hidden');
+                input.value = '';
+                err.classList.add('hidden');
+                this.passwordCallback = null; // Reject logic implicitly
+            };
+        },
+
+        requestPassword: function() {
+            return new Promise((resolve, reject) => {
+                document.getElementById('passwordModal').classList.remove('hidden');
+                this.passwordCallback = resolve;
+            });
+        },
+
+        setupQR: function() {
+            const video = document.getElementById('qrVideo');
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            let scanning = false;
+
+            const startScan = () => {
+                document.getElementById('qrModal').classList.remove('hidden');
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        video.setAttribute("playsinline", true);
+                        video.play();
+                        scanning = true;
+                        requestAnimationFrame(tick);
+                    });
+            };
+
+            const stopScan = () => {
+                scanning = false;
+                if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+                document.getElementById('qrModal').classList.add('hidden');
+            };
+
+            document.getElementById('scanQRBtn').onclick = startScan;
+            document.getElementById('closeQR').onclick = stopScan;
+
+            const tick = () => {
+                if (!scanning) return;
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    // Simple logic: if JSQR loaded
+                    if (window.jsQR) {
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                        if (code) {
+                            // Supondo formato "MIGSTAR:50"
+                            const parts = code.data.split(':');
+                            if(parts.length > 0) {
+                                // Tenta pegar número, ou pega 10 se falhar
+                                let val = parseInt(parts[1]) || 10; 
+                                stopScan();
+                                this.receiveStars(val);
+                            }
+                        }
+                    }
+                }
+                requestAnimationFrame(tick);
+            };
+        }
+    };
+
+    // Inicializar App quando pronto
+    document.addEventListener('DOMContentLoaded', () => app.init());
+
+  </script>
 </body>
 </html>
